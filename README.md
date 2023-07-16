@@ -30,15 +30,28 @@ dependencies {
 
 To use this dialect:
 
-- Spring For properties file (application.properties):
+- For Spring properties file (application.properties):
 
 ```
 spring.datasource.username=_SYSTEM
 spring.datasource.url=jdbc:IRIS://localhost:1972/USER
 spring.datasource.password=SYS
 spring.datasource.driver-class-name=com.intersystems.jdbc.IRISDriver
-spring.jpa.properties.hibernate.temp.use_jdbc_metadata_defaults = false
 spring.jpa.database-platform=io.github.yurimarx.hibernateirisdialect.InterSystemsIRISDialect
+```
+
+- for Spring yml file (application.yml):
+```
+spring:
+    datasource:
+        url: jdbc:IRIS://localhost:1972/USER
+        password: SYS
+        username: _SYSTEM
+    jpa:
+        properties:
+            hibernate:
+                dialect: io.github.yurimarx.hibernateirisdialect.InterSystemsIRISDialect
+        
 ```
 
 - For Hibernate file (hibernate.properties):
