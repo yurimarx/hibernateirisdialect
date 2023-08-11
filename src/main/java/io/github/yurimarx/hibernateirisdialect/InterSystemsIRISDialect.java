@@ -535,4 +535,24 @@ public class InterSystemsIRISDialect extends Dialect {
 		appender.appendSql( OracleDialect.datetimeFormat( format, false, false ).result() );
 	}
 
+	@Override
+	public boolean supportsCurrentTimestampSelection() {
+		return true;
+	}
+
+	@Override
+	public String getCurrentTimestampSelectString() {
+		return "select now()";
+	}
+
+	@Override
+	public boolean isCurrentTimestampSelectStringCallable() {
+		return false;
+	}
+
+	@Override
+	public void appendBinaryLiteral(SqlAppender appender, byte[] bytes) {
+		appendLiteral(appender, new String(bytes));
+	}
+
 }

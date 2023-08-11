@@ -40,6 +40,6 @@ public class InterSystemsIRISIdentityColumnSupport  extends IdentityColumnSuppor
 
 	@Override
 	public String getIdentitySelectString(String table, String column, int type) {
-		return "SELECT LAST_IDENTITY() FROM %TSQL_sys.snf";
+		return "SELECT LAST_IDENTITY()";
 	}
 }

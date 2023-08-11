@@ -6,11 +6,12 @@
  */
 package io.github.yurimarx.hibernateirisdialect;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.query.sqm.ComparisonOperator;
-import org.hibernate.sql.ast.Clause;
 import org.hibernate.sql.ast.spi.AbstractSqlAstTranslator;
 import org.hibernate.sql.ast.spi.SqlSelection;
 import org.hibernate.sql.ast.tree.Statement;
@@ -82,7 +83,59 @@ public class InterSystemsIRISSqlAstTranslator <T extends JdbcOperation> extends 
 
 	@Override
 	protected void renderComparison(Expression lhs, ComparisonOperator operator, Expression rhs) {
-		renderComparisonEmulateIntersect( lhs, operator, rhs );
+		switch (operator) {
+			case DISTINCT_FROM:
+//				((A <> B OR A IS NULL OR B IS NULL) AND NOT (A IS NULL AND B IS NULL))
+				appendSql(OPEN_PARENTHESIS);
+				appendSql(OPEN_PARENTHESIS);
+				lhs.accept( this );
+				appendSql(" <> ");
+				rhs.accept( this );
+				appendSql(" OR ");
+				lhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(" OR ");
+				rhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(CLOSE_PARENTHESIS);
+				appendSql(" AND NOT ");
+				appendSql(OPEN_PARENTHESIS);
+				lhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(" AND ");
+				rhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(CLOSE_PARENTHESIS);
+				appendSql(CLOSE_PARENTHESIS);
+				break;
+			case NOT_DISTINCT_FROM:
+//				(NOT (A <> B OR A IS NULL OR B IS NULL) OR (A IS NULL AND B IS NULL))
+				appendSql(OPEN_PARENTHESIS);
+				appendSql("NOT ");
+				appendSql(OPEN_PARENTHESIS);
+				lhs.accept( this );
+				appendSql(" <> ");
+				rhs.accept( this );
+				appendSql(" OR ");
+				lhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(" OR ");
+				rhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(CLOSE_PARENTHESIS);
+				appendSql(" OR ");
+				appendSql(OPEN_PARENTHESIS);
+				lhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(" AND ");
+				rhs.accept( this );
+				appendSql(" IS NULL ");
+				appendSql(CLOSE_PARENTHESIS);
+				appendSql(CLOSE_PARENTHESIS);
+				break;
+			default:
+				super.renderComparison(lhs, operator, rhs);
+		}
 	}
 
 	@Override
@@ -131,12 +184,27 @@ public class InterSystemsIRISSqlAstTranslator <T extends JdbcOperation> extends 
 		super.visitSelectClause(selectClause);
 		selectDistinct = false;
 	}
+
+	List<ColumnReference> groupBy = Collections.emptyList();
+
+	@Override
+	public void visitQuerySpec(QuerySpec querySpec) {
+		List<Expression> groupByAll = querySpec.getGroupByClauseExpressions();
+		if (groupByAll.size() > 0) {
+			groupBy = ((SqlTuple) groupByAll.get(0)).getExpressions().stream().map(el -> el.getColumnReference()).collect(Collectors.toList());
+		}
+		super.visitQuerySpec(querySpec);
+		groupBy = Collections.emptyList();
+	}
+
 	@Override
 	protected void renderSelectExpression(Expression expression) {
 		if ( expression instanceof Predicate) {
 			renderExpressionAsClauseItem(expression);
 		}
-		else if (selectDistinct && expression instanceof ColumnReference) {
+		else if (
+				expression instanceof ColumnReference && (selectDistinct || groupBy.contains(expression))
+		) {
 			appendSql( "%EXACT " );
 			expression.accept( this );
 			appendSql( " as " );
@@ -147,4 +215,9 @@ public class InterSystemsIRISSqlAstTranslator <T extends JdbcOperation> extends 
 		}
 	}
 
+
+	@Override
+	protected boolean supportsIntersect() {
+		return false;
+	}
 }
