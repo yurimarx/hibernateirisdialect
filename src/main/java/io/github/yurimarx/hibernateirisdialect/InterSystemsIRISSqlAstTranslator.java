@@ -10,13 +10,12 @@ import java.util.List;
 
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.query.sqm.ComparisonOperator;
+import org.hibernate.sql.ast.Clause;
 import org.hibernate.sql.ast.spi.AbstractSqlAstTranslator;
 import org.hibernate.sql.ast.spi.SqlSelection;
 import org.hibernate.sql.ast.tree.Statement;
-import org.hibernate.sql.ast.tree.expression.Expression;
-import org.hibernate.sql.ast.tree.expression.Literal;
-import org.hibernate.sql.ast.tree.expression.SqlTuple;
-import org.hibernate.sql.ast.tree.expression.Summarization;
+import org.hibernate.sql.ast.tree.expression.*;
+import org.hibernate.sql.ast.tree.predicate.Predicate;
 import org.hibernate.sql.ast.tree.select.QueryPart;
 import org.hibernate.sql.ast.tree.select.QuerySpec;
 import org.hibernate.sql.ast.tree.select.SelectClause;
@@ -124,4 +123,28 @@ public class InterSystemsIRISSqlAstTranslator <T extends JdbcOperation> extends 
 	protected boolean supportsRowValueConstructorSyntaxInQuantifiedPredicates() {
 		return false;
 	}
+
+	boolean selectDistinct = false;
+	@Override
+	public void visitSelectClause(SelectClause selectClause) {
+		selectDistinct = selectClause.isDistinct();
+		super.visitSelectClause(selectClause);
+		selectDistinct = false;
+	}
+	@Override
+	protected void renderSelectExpression(Expression expression) {
+		if ( expression instanceof Predicate) {
+			renderExpressionAsClauseItem(expression);
+		}
+		else if (selectDistinct && expression instanceof ColumnReference) {
+			appendSql( "%EXACT " );
+			expression.accept( this );
+			appendSql( " as " );
+			appendSql( ((ColumnReference) expression).getSelectableName() );
+		}
+		else {
+			expression.accept( this );
+		}
+	}
+
 }
