@@ -13,10 +13,7 @@ import static org.hibernate.query.sqm.produce.function.FunctionParameterType.STR
 import static org.hibernate.type.SqlTypes.BOOLEAN;
 import static org.hibernate.type.SqlTypes.TIMESTAMP_WITH_TIMEZONE;
 
-import java.sql.CallableStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 
 import org.hibernate.LockMode;
 import org.hibernate.boot.model.FunctionContributions;
@@ -38,6 +35,9 @@ import org.hibernate.dialect.pagination.TopLimitHandler;
 import org.hibernate.dialect.sequence.NoSequenceSupport;
 import org.hibernate.dialect.sequence.SequenceSupport;
 import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
+import org.hibernate.engine.jdbc.env.spi.IdentifierHelper;
+import org.hibernate.engine.jdbc.env.spi.IdentifierHelperBuilder;
+import org.hibernate.engine.jdbc.env.spi.NameQualifierSupport;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.hibernate.exception.DataException;
@@ -71,41 +71,139 @@ import jakarta.persistence.TemporalType;
  * 
  */
 public class InterSystemsIRISDialect extends Dialect {
-	
-	final static DatabaseVersion MINIMUM_VERSION = DatabaseVersion.make( 2019, 1 );
-	
+
+	final static DatabaseVersion MINIMUM_VERSION = DatabaseVersion.make(2019, 1);
+
 	public InterSystemsIRISDialect() {
-		super( MINIMUM_VERSION );
+		super(MINIMUM_VERSION);
 	}
 
 	public InterSystemsIRISDialect(DialectResolutionInfo info) {
-		super( info );
+		super(info);
 	}
-	
+
 	public InterSystemsIRISDialect(DatabaseVersion version) {
-		super( version );
+		super(version);
 	}
-	
+
 	@Override
 	protected DatabaseVersion getMinimumSupportedVersion() {
 		return MINIMUM_VERSION;
 	}
-	
+
 	@Override
 	public int getDefaultStatementBatchSize() {
 		return 15;
 	}
-	
+
 	@Override
 	public int getMaxVarcharLength() {
-		return  3_641_144;
+		return 3_641_144;
 	}
-	
+
 	@Override
 	public int getDefaultDecimalPrecision() {
 		return 19;
 	}
-	
+
+	public NameQualifierSupport getNameQualifierSupport() {
+		return NameQualifierSupport.SCHEMA;
+	}
+
+	public IdentifierHelper buildIdentifierHelper(
+			IdentifierHelperBuilder builder,
+			DatabaseMetaData dbMetaData) throws SQLException {
+		builder.setAutoQuoteKeywords(true);
+		builder.applyReservedWords(
+				"absolute",
+				"asc",
+				"assertion",
+				"avg",
+				"bit",
+				"bit_length",
+				"cascade",
+				"character_length",
+				"char_length",
+				"coalesce",
+				"connection",
+				"constraints",
+				"convert",
+				"count",
+				"deferrable",
+				"deferred",
+				"desc",
+				"descriptor",
+				"diagnostics",
+				"domain",
+				"endexec",
+				"exception",
+				"extract",
+				"first",
+				"found",
+				"go",
+				"goto",
+				"initially",
+				"isolation",
+				"last",
+				"level",
+				"lower",
+				"max",
+				"min",
+				"names",
+				"next",
+				"nullif",
+				"octet_length",
+				"option",
+				"pad",
+				"partial",
+				"preserve",
+				"prior",
+				"privileges",
+				"public",
+				"read",
+				"relative",
+				"restrict",
+				"role",
+				"schema",
+				"section",
+				"session_user",
+				"shard",
+				"space",
+				"sqlerror",
+				"statistics",
+				"substring",
+				"sum",
+				"sysdate",
+				"temporary",
+				"top",
+				"transaction",
+				"trim",
+				"upper",
+				"work",
+				"write ");
+		return super.buildIdentifierHelper(builder, dbMetaData);
+	}
+
+	public boolean supportsAlterColumnType() {
+		return true;
+	}
+
+	public String getCascadeConstraintsString() {
+		return " CASCADE";
+	}
+
+	public boolean supportsIfExistsBeforeTableName() {
+		return true;
+	}
+
+	public boolean supportsColumnCheck() {
+		return false;
+	}
+
+	public boolean supportsNullPrecedence() {
+		return false;
+	}
+
 	@Override
 	protected String columnType(int sqlTypeCode) {
 		switch ( sqlTypeCode ) {
